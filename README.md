@@ -1,1 +1,3 @@
-# wgl
+# webgl
+
+Webgl/glsl samples.
