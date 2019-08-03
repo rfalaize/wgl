@@ -5,7 +5,7 @@ const gl = canvas.getContext("webgl");
 // create vertex shader (glsl syntax to be compiled)
 var vertexShaderText = [
   "precision mediump float;",
-  "attribute vec2 vertPosition;",
+  "attribute vec3 vertPosition;",
   "attribute vec3 vertColor;",
   "varying vec3 fragColor;",
   "uniform mat4 mWorld;", // matrix for rotation
@@ -14,7 +14,7 @@ var vertexShaderText = [
 
   "void main(){",
   " fragColor = vertColor;",
-  " gl_Position = mProj * mView * mWorld * vec4(vertPosition, 0.0, 1.0);",
+  " gl_Position = mProj * mView * mWorld * vec4(vertPosition, 1.0);",
   "}"
 ].join("\n");
 
@@ -41,6 +41,18 @@ function compileShader(shader, shaderName) {
 
 function init() {
   console.log("initializing scene...");
+
+  if (!gl) {
+    alert("Your browser does not support WebGL");
+  }
+
+  gl.clearColor(0.75, 0.85, 0.8, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);
+  //gl.enable(gl.CULL_FACE);
+  //gl.frontFace(gl.CCW);
+  //gl.cullFace(gl.BACK);
+  //gl.cullFace(gl.FRONT);
 
   gl.clearColor(0.75, 0.85, 0.8, 1.0); // set paint color
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // paint using color buffer
@@ -76,14 +88,80 @@ function init() {
   // create vertices and pass it to the program
   // vertices coordinates are (x,y) in (-1.0, 1.0), centered around (0,0)
   var vertices = [
-    //X,    Y,    Z,   R,   G,   B
-    [+0.0, +0.5, +0.0, 1.0, 1.0, 0.0],
-    [-0.5, -0.5, +0.0, 0.7, 0.0, 1.0],
-    [+0.5, -0.5, +0.0, 0.1, 1.0, 0.6]
+    //X,    Y,    Z,   R,    G,    B
+
+    // top
+    [-1.0, +1.0, -1.0, 0.5, 0.5, 0.5],
+    [-1.0, +1.0, +1.0, 0.5, 0.5, 0.5],
+    [+1.0, +1.0, -1.0, 0.5, 0.5, 0.5],
+    [+1.0, +1.0, +1.0, 0.5, 0.5, 0.5],
+
+    // left
+    [-1.0, -1.0, -1.0, 0.8, 0.2, 0.5],
+    [-1.0, -1.0, +1.0, 0.8, 0.2, 0.5],
+    [-1.0, +1.0, -1.0, 0.8, 0.2, 0.5],
+    [-1.0, +1.0, +1.0, 0.8, 0.2, 0.5],
+
+    // right
+    [+1.0, -1.0, -1.0, 0.2, 0.2, 0.8],
+    [+1.0, -1.0, +1.0, 0.2, 0.2, 0.8],
+    [+1.0, +1.0, -1.0, 0.2, 0.2, 0.8],
+    [+1.0, +1.0, +1.0, 0.2, 0.2, 0.8],
+
+    // front
+    [-1.0, -1.0, +1.0, 1.0, 0.0, 0.1],
+    [-1.0, +1.0, +1.0, 1.0, 0.0, 0.1],
+    [+1.0, -1.0, +1.0, 1.0, 0.0, 0.1],
+    [+1.0, +1.0, +1.0, 1.0, 0.0, 0.1],
+
+    // back
+    [-1.0, -1.0, -1.0, 0.0, 1.0, 0.1],
+    [-1.0, +1.0, -1.0, 0.0, 1.0, 0.1],
+    [+1.0, -1.0, -1.0, 0.0, 1.0, 0.1],
+    [+1.0, +1.0, -1.0, 0.0, 1.0, 0.1],
+
+    // bottom
+    [-1.0, -1.0, -1.0, 0.5, 0.5, 1.0],
+    [-1.0, -1.0, +1.0, 0.5, 0.5, 1.0],
+    [+1.0, -1.0, -1.0, 0.5, 0.5, 1.0],
+    [+1.0, -1.0, +1.0, 0.5, 0.5, 1.0]
   ].flat();
-  var triangleBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, triangleBuffer);
+
+  // create box indexes
+  // i.e tell with group of vertexes form a triangle
+
+  var boxIndices = [
+    // top
+    [0, 1, 3],
+    [0, 3, 2],
+    // left
+    [4, 5, 7],
+    [4, 7, 6],
+    // right
+    [8, 9, 11],
+    [8, 11, 10],
+    // front
+    [12, 13, 15],
+    [12, 15, 14],
+    // back
+    [16, 17, 19],
+    [16, 19, 18],
+    // bottom
+    [20, 21, 23],
+    [20, 23, 22]
+  ].flat();
+
+  var boxVertexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, boxVertexBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+  var boxIndicesBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, boxIndicesBuffer);
+  gl.bufferData(
+    gl.ELEMENT_ARRAY_BUFFER,
+    new Uint16Array(boxIndices),
+    gl.STATIC_DRAW
+  );
 
   var positionAttributeLocation = gl.getAttribLocation(program, "vertPosition");
   var colorAttributeLocation = gl.getAttribLocation(program, "vertColor");
@@ -118,7 +196,7 @@ function init() {
   var matrixView = new Float32Array(16);
   var matrixProj = new Float32Array(16);
   glMatrix.mat4.identity(matrixWorld);
-  glMatrix.mat4.lookAt(matrixView, [0, 0, -5], [0, 0, 0], [0, 1, 0]);
+  glMatrix.mat4.lookAt(matrixView, [0, 0, -8], [0, 0, 0], [0, 1, 0]);
   glMatrix.mat4.perspective(
     matrixProj,
     glMatrix.glMatrix.toRadian(45),
@@ -137,20 +215,26 @@ function init() {
   // **************************************************************
   var angle = 0;
   var identityMatrix = new Float32Array(16);
+  var xRotationMatrix = new Float32Array(16);
+  var yRotationMatrix = new Float32Array(16);
   glMatrix.mat4.identity(identityMatrix);
 
   var loop = function() {
     // get number of seconds since window started
     // one full rotation every 6 seconds
     angle = (performance.now() / 1000 / 6) * 2 * Math.PI;
-    glMatrix.mat4.rotate(matrixWorld, identityMatrix, angle, [0, 1, 0]);
+    //glMatrix.mat4.rotate(matrixWorld, identityMatrix, angle, [0.8, 1, 0]);
+    glMatrix.mat4.rotate(yRotationMatrix, identityMatrix, angle, [0, 1, 0]);
+    glMatrix.mat4.rotate(xRotationMatrix, identityMatrix, angle / 4, [1, 0, 0]);
+    glMatrix.mat4.mul(matrixWorld, yRotationMatrix, xRotationMatrix);
     // pass to gpu
     gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, matrixWorld);
 
     // clear screen
     //gl.clearColor(0.75, 0.85, 0.8, 1.0);
     gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
+    // draw "length" points, starting at index 0
 
     // call function again once screen is ready to display
     // usually 60 times per second
